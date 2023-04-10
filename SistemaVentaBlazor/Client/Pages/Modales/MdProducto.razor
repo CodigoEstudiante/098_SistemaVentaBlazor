@@ -1,0 +1,104 @@
+﻿@inject ICategoriaService _categoriaServicio
+@inject IProductoService _productoServicio
+@inject ISnackbar _snackBar
+
+<MudDialog Style="width:400px">
+
+    <DialogContent>
+        <MudContainer Style="max-height: 400px; overflow-y: scroll" Class="m-0 p-0">
+
+            <EditForm Model="@_producto">
+
+                <MudTextField @bind-Value="@_producto.Nombre" Class="mb-3"
+                              Label="Nombre" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Badge" />
+
+
+                <MudSelect Label="Categoria" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" Class="mb-3"
+                           @bind-Value="categoriaSeleccionado">
+                    @if (listaCategoria.Any())
+                    {
+                        foreach (var rol in listaCategoria)
+                        {
+                            <MudSelectItem Value="@rol">@rol.Descripcion</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+
+                <MudNumericField @bind-Value="@_producto.Stock" Class="mb-3"
+                              Label="Stock" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.QrCode" />
+
+                <MudNumericField @bind-Value="@_producto.Precio" Class="mb-3"
+                              Label="Precio" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Money" />
+
+            </EditForm>
+
+        </MudContainer>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Guardar">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public ProductoDTO _producto { get; set; } = new ProductoDTO();
+
+    List<CategoriaDTO> listaCategoria = new List<CategoriaDTO>();
+    public CategoriaDTO categoriaSeleccionado;
+
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var resultado = await _categoriaServicio.Lista();
+
+        if (resultado.status)
+        {
+            listaCategoria = resultado.value!;
+            if (_producto.IdProducto != 0)
+                categoriaSeleccionado = listaCategoria.FirstOrDefault(p => p.IdCategoria == _producto.IdCategoria)!;
+            else
+                categoriaSeleccionado = listaCategoria.First();
+
+
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+    private async Task Guardar()
+    {
+        _producto.IdCategoria = categoriaSeleccionado.IdCategoria;
+        string _mensaje = "";
+        bool _resultado;
+
+        if (_producto.IdProducto != 0)
+        {
+            _resultado = await _productoServicio.Editar(_producto);
+            _mensaje = "Producto fue modificado";
+        }
+        else
+        {
+            var response = await _productoServicio.Crear(_producto);
+            _resultado = response.status;
+            _mensaje = "Producto fue creado";
+        }
+
+        if (_resultado)
+        {
+            _snackBar.Add(_mensaje, Severity.Success, a => a.VisibleStateDuration = 500);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        else
+            _snackBar.Add("Error al guardar cambios", Severity.Error, a => a.VisibleStateDuration = 500);
+
+    }
+}

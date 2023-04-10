@@ -1,0 +1,125 @@
+﻿@inject IRolService _rolServicio
+@inject IUsuarioService _usuarioServicio
+@inject ISnackbar _snackBar
+
+<MudDialog Style="width:400px">
+
+    <DialogContent>
+        <MudContainer Style="max-height: 400px; overflow-y: scroll" Class="m-0 p-0">
+
+            <EditForm Model="@_usuario">
+
+                <MudTextField @bind-Value="@_usuario.NombreApellidos" Class="mb-3"
+                              Label="Nombre Completo" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Badge" />
+
+                <MudTextField @bind-Value="@_usuario.Correo" Class="mb-3"
+                              Label="Correo" Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Email" />
+
+                <MudSelect Label="Rol" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" Class="mb-3" 
+                @bind-Value="rolSeleccionado">
+                    @if (listaRoles.Any())
+                    {
+                        foreach (var rol in listaRoles)
+                        { 
+                            <MudSelectItem Value="@rol">@rol.Descripcion</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+
+                <MudTextField @bind-Value="@_usuario.Clave" Label="Contraseña" Variant="Variant.Outlined" Class="mb-3"
+                              InputType="@PasswordInput" Adornment="Adornment.End"
+                              AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="MostrarClave"
+                              AdornmentAriaLabel="Mostrar Contraseña" />
+
+            </EditForm>
+
+        </MudContainer>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Guardar">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public UsuarioDTO _usuario { get; set; } = new UsuarioDTO();
+
+    List<RolDTO> listaRoles = new List<RolDTO>();
+    public RolDTO rolSeleccionado;
+
+
+    bool isShow;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine(_usuario.IdUsuario);
+
+        var resultado = await _rolServicio.Lista();
+
+        if (resultado.status)
+        {
+            listaRoles = resultado.value!;
+            if (_usuario.IdUsuario != 0)
+                rolSeleccionado = listaRoles.FirstOrDefault(p => p.IdRol == _usuario.IdRol)!;
+            else
+                 rolSeleccionado = listaRoles.First();
+
+
+        }
+    }
+
+    void MostrarClave()
+    {
+        @if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+    private async Task Guardar()	
+    {
+        _usuario.IdRol = rolSeleccionado.IdRol;
+        string _mensaje = "";
+        bool _resultado;
+
+        if(_usuario.IdUsuario != 0)
+        {
+            _resultado = await _usuarioServicio.Editar(_usuario);
+            _mensaje = "Usuario fue modificado";
+        }
+        else
+        {
+            var response = await _usuarioServicio.Crear(_usuario);
+            _resultado = response.status;
+            _mensaje = "Usuario fue creado";
+        }
+
+        if (_resultado)
+        {
+            _snackBar.Add(_mensaje, Severity.Success, a => a.VisibleStateDuration = 500);
+            MudDialog.Close(DialogResult.Ok(true));
+        }else
+            _snackBar.Add("Error al guardar cambios", Severity.Error, a => a.VisibleStateDuration = 500);
+        
+    }
+}

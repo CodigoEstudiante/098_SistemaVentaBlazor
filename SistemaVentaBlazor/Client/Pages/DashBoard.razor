@@ -1,0 +1,142 @@
+﻿@page "/page/dashboard"
+
+@inject IDashBoardService _dashboardServicio;
+@using ChartJs.Blazor.BarChart.Axes;
+@using ChartJs.Blazor.Common;
+@using ChartJs.Blazor.Common.Axes;
+@using ChartJs.Blazor.Common.Axes.Ticks;
+@using ChartJs.Blazor.BarChart;
+@using ChartJs.Blazor.Util;
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-5">
+
+    <MudText Typo="Typo.h5" GutterBottom="true">DashBoard</MudText>
+
+    <MudPaper Elevation="3" Class="pa-4" Width="100%">
+
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudPaper Elevation="25" Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Euro" Color="Color.Primary" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Total Ingresos</MudText>
+                        <MudText Typo="Typo.h5">@dashboard.TotalIngresos</MudText>
+                    </div>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudPaper Elevation="25" Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
+                    <MudIcon Icon="@Icons.Material.Filled.LocalOffer" Color="Color.Secondary" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Total Ventas</MudText>
+                        <MudText Typo="Typo.h5">@dashboard.TotalVentas</MudText>
+                    </div>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudPaper Elevation="25" Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Layers" Color="Color.Success" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Total Productos</MudText>
+                        <MudText Typo="Typo.h5">@dashboard.TotalProductos</MudText>
+                    </div>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="12" md="12">
+                <MudPaper Elevation="25" Style="height:310px;">
+
+                    <Chart Config="barconfig" @ref="_chart"></Chart>
+
+                </MudPaper>
+            </MudItem>
+
+        </MudGrid>
+        
+    </MudPaper>
+
+</MudContainer>
+@code {
+    DashBoardDTO dashboard = new DashBoardDTO();
+
+    private BarConfig barconfig;
+    private Chart _chart = null!;
+
+    //private PieConfig _config;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        barconfig = new BarConfig
+         {
+            Options = new BarOptions
+            {
+               
+                MaintainAspectRatio = false,
+                Responsive = true,
+                Title = new OptionsTitle
+                {
+                    Display = true
+                },
+                Scales = new BarScales
+                 {
+                    YAxes = new List<CartesianAxis>
+                    {
+                        new BarLinearCartesianAxis
+                        {
+                            Stacked = true,
+                            MinBarLength = 0
+                        }
+                    }
+                 }
+            }
+         };
+
+        foreach (string lb in new[] { "temp" })
+            barconfig.Data.Labels.Add(lb);
+
+        IDataset<int> dataSet = new BarDataset<int>(new[] { 1 })
+            {
+                BackgroundColor = ColorUtil.ColorHexString(54, 162, 235),
+                BorderColor = ColorUtil.ColorHexString(54, 162, 235),
+                BorderWidth = 1
+            };
+
+        barconfig.Data.Datasets.Add(dataSet);
+
+
+        var response = await _dashboardServicio.Resumen();
+        if (response.status)
+        {
+            dashboard = (DashBoardDTO)response.value!;
+            var labels = dashboard.VentasUltimaSemana.Select(v => v.Fecha).ToArray();
+            var values = dashboard.VentasUltimaSemana.Select(v => v.Total).ToArray();
+            ConfigureChart(labels, values);
+        }
+
+    }
+
+    private void ConfigureChart(string[] labels,int[] values)
+    {
+        barconfig.Data.Labels.Clear();
+
+        barconfig.Data.Datasets.Clear();
+
+        foreach(string lb in labels)
+            barconfig.Data.Labels.Add(lb);
+
+        IDataset<int> dataSet = new BarDataset<int>(values)
+        {
+                Label = "Numero de ventas por día",
+                BackgroundColor = ColorUtil.ColorHexString(54, 162, 235),
+                BorderColor = ColorUtil.ColorHexString(54, 162, 235),
+                BorderWidth = 1
+        };
+        barconfig.Data.Datasets.Add(dataSet);
+
+        _chart.Update();
+    }
+
+
+
+
+}

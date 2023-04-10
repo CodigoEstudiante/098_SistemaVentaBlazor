@@ -1,0 +1,158 @@
+﻿@page "/page/producto"
+@inject IProductoService _productoServicio
+@inject IDialogService _dialogServicio
+@inject ISnackbar _snackBar
+@inject SweetAlertService Swal;
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-5">
+
+    <MudText Typo="Typo.h5" GutterBottom="true">Productos</MudText>
+
+    <MudPaper Elevation="3" Class="pa-4" Width="100%">
+        <MudGrid>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           Color="Color.Primary"
+                           OnClick="AbrirNuevoProducto">
+                    Nuevo Producto
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12">
+
+                <MudTable Items="@listaProductos"
+                          Striped="true" Bordered="true" Dense="true"
+                          Filter="new Func<ProductoDTO,bool>(FilterFunc1)" @bind-SelectedItem="selectedItem1"
+                          Loading="@_loading" LoadingProgressColor="Color.Info">
+                    <ToolBarContent>
+                        <MudSpacer />
+                        <MudTextField @bind-Value="searchString1" Placeholder="Buscar" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh>Nombre</MudTh>
+                        <MudTh>Categoria</MudTh>
+                        <MudTh>Stock</MudTh>
+                        <MudTh>Precio</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="productoRow">
+                        <MudTd DataLabel="Nombre">@productoRow.Nombre</MudTd>
+                        <MudTd DataLabel="Correo">@productoRow.DescripcionCategoria</MudTd>
+                        <MudTd DataLabel="Rol">@productoRow.Stock</MudTd>
+                        <MudTd DataLabel="Precio">@productoRow.Precio</MudTd>
+                        <MudTd DataLabel="">
+                            <MudFab Color="Color.Primary"
+                                    StartIcon="@Icons.Material.Filled.Edit"
+                                    Size="Size.Small"
+                                    IconSize="Size.Small"
+                                    OnClick="@(() => AbrirEditarProducto(productoRow))" />
+                            <MudFab Color="Color.Error"
+                                    StartIcon="@Icons.Material.Filled.Delete"
+                                    Size="Size.Small"
+                                    IconSize="Size.Small"
+                                    OnClick="@(() => EliminarUsuario(productoRow))" />
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager />
+                    </PagerContent>
+                </MudTable>
+
+
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+</MudContainer>
+
+@code {
+    List<ProductoDTO> listaProductos = new List<ProductoDTO>();
+    private string searchString1 = "";
+    private ProductoDTO selectedItem1 = null;
+    private bool _loading = true;
+
+    private async Task ObtenerProductos()
+    {
+        var result = await _productoServicio.Lista();
+
+        if (result.status)
+        {
+            listaProductos = (List<ProductoDTO>)result.value!;
+        }
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ObtenerProductos();
+        _loading = false;
+    }
+
+    private bool FilterFunc1(ProductoDTO element) => FilterFunc(element, searchString1);
+
+    private bool FilterFunc(ProductoDTO element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Nombre.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.DescripcionCategoria.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+     
+        if ($"{element.Nombre} {element.DescripcionCategoria}".Contains(searchString))
+            return true;
+
+        return false;
+    }
+
+    private async Task AbrirNuevoProducto()
+    {
+        var dialogo = _dialogServicio.Show<MdProducto>("Nuevo Producto");
+        var resultado = await dialogo.Result;
+
+        if (!resultado.Canceled)
+        {
+            await ObtenerProductos();
+        }
+    }
+
+    private async Task AbrirEditarProducto(ProductoDTO model)
+    {
+        var parametros = new DialogParameters { ["_producto"] = model };
+
+        var dialogo = _dialogServicio.Show<MdProducto>("Editar Producto", parametros);
+        var resultado = await dialogo.Result;
+
+        if (!resultado.Canceled)
+        {
+            await ObtenerProductos();
+        }
+    }
+
+    private async Task EliminarUsuario(ProductoDTO model)
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "Esta seguro?",
+                Text = $"Eliminar producto: {model.Nombre}",
+                Icon = SweetAlertIcon.Warning,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Si, eliminar",
+                CancelButtonText = "No, volver"
+            });
+
+        if (result.IsConfirmed)
+        {
+            var resultado = await _productoServicio.Eliminar(model.IdProducto);
+
+            if (resultado)
+            {
+                _snackBar.Add("El producto fue eliminado", Severity.Success, a => a.VisibleStateDuration = 500);
+                await ObtenerProductos();
+            }
+            else
+                _snackBar.Add("No se pudo eliminar", Severity.Error, a => a.VisibleStateDuration = 500);
+        }
+    }
+
+}

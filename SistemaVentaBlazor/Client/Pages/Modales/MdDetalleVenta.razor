@@ -1,0 +1,48 @@
+﻿<MudDialog>
+
+    <DialogContent>
+        <MudContainer Class="m-0 p-0">
+            
+            <MudGrid>
+                <MudItem xs="12">
+                    <div class="d-flex flex-grow-1 gap-4">
+                        <MudTextField @bind-Value="_venta.FechaRegistro" Label="Fecha Registro" Variant="Variant.Outlined" ReadOnly="true" Margin="Margin.Dense"></MudTextField>
+                        <MudTextField @bind-Value="_venta.NumeroDocumento" Label="Numero Venta" Variant="Variant.Outlined" ReadOnly="true" Margin="Margin.Dense"></MudTextField>
+                        <MudTextField @bind-Value="_venta.TipoPago" Label="Tipo de Pago" Variant="Variant.Outlined" ReadOnly="true" Margin="Margin.Dense"></MudTextField>
+                        <MudTextField @bind-Value="_venta.Total" Label="Total" Variant="Variant.Outlined" ReadOnly="true" Margin="Margin.Dense"></MudTextField>
+                    </div>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText>Lista de productos</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudDataGrid Items="@_venta.DetalleVenta" Dense="true" Striped="true">
+                        <Columns>
+                            <PropertyColumn Property="x => x.DescripcionProducto" Title="Producto" />
+                            <PropertyColumn Property="x => x.Cantidad" />
+                            <PropertyColumn Property="x => x.Precio" />
+                            <PropertyColumn Property="x => x.Total" />
+                        </Columns>
+                    </MudDataGrid>
+                </MudItem>
+            </MudGrid>
+
+        </MudContainer>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Cerrar">Volver</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public VentaDTO _venta { get; set; } = new VentaDTO();
+
+    private void Cerrar()
+    {
+        MudDialog.Cancel();
+    }
+}
